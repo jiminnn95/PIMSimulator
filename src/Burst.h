@@ -380,6 +380,17 @@ struct NumpyBurstType
         }
     }
 
+    void setRandomFp16()
+    {
+        loadTobShape((double)16);
+        for (int i = 0; i < bShape[0] * bShape[1]; i++)
+        {
+            BurstType burst;
+            burst.set((float)0); // burst.setRandom();
+            bData.push_back(burst);
+        }
+    }
+
     void loadFp32(string filename)
     {
         npy::LoadArrayFromNumpy(filename, shape, data);

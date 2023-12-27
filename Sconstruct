@@ -20,7 +20,11 @@ def getSources(target):
 
     if (target == "build"):
         build_sources = (Glob(joinpath(base_path["build"], "*.cpp")) +
-                         Glob(joinpath(base_path["build"], "tests/*.cpp")))
+                         Glob(joinpath(base_path["build"], "tests/PIMCmdGen.cpp")) + 
+                         Glob(joinpath(base_path["build"], "tests/PIMKernel.cpp")) +
+                         Glob(joinpath(base_path["build"], "tests/KernelAddrGen.cpp")) +
+                         # Glob(joinpath(base_path["build"], "tests/*.cpp")) +
+                         Glob(joinpath(base_path["build"], "simulator/*.cpp")))
         if int(en_emul) != 1:
             build_sources += Glob(joinpath(base_path["tools_build"], "*/*.cpp"))
         sources = build_sources

@@ -235,11 +235,11 @@ class DataDim
             {
                 weight_npbst_.shape.push_back(output_dim_);
                 weight_npbst_.shape.push_back(input_dim_);
-                weight_npbst_.loadTobShape(16);
+                weight_npbst_.setRandomFp16();
 
                 input_npbst_.shape.push_back(batch_size_);
                 input_npbst_.shape.push_back(input_dim_);
-                input_npbst_.loadTobShape(16);
+                input_npbst_.setRandomFp16();
 
                 for (int i = 0; i < input_npbst_.bShape[1]; i++)
                 {
