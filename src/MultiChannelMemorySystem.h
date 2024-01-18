@@ -109,7 +109,7 @@ class MultiChannelMemorySystem : public MemoryObject
     unsigned findChannelNumber(uint64_t addr);
     void actual_update();
 
-    unsigned megsOfMemory;
+    unsigned megsPerChannel;
     string deviceIniFilename;
     string systemIniFilename;
     string traceFilename;

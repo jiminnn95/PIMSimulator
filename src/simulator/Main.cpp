@@ -30,35 +30,30 @@ void simulateRELU(shared_ptr<PIMKernel> kernel, uint32_t dim);
 
 int main(int argc, char* argv[])
 {
-    // define PIM kernel
-    int numPIMChan = 1;
-    int numPIMRank = 1;
     shared_ptr<MultiChannelMemorySystem> mem = make_shared<MultiChannelMemorySystem>(
         "ini/HBM2_samsung_2M_16B_x64.ini", "system_hbm.ini", ".", "example_app",
-        256 * numPIMChan * 2);
+        256 * 2);
+
+    unsigned int numPIMChan, numPIMRank = 1; // this is fixed for now
+    mem->getIniUint("NUM_CHANS", &numPIMChan);
+
     shared_ptr<PIMKernel> kernel = make_shared<PIMKernel>(mem, numPIMChan, numPIMRank);
 
     // define Kernel type and dimension
-    simulateGEMV(kernel, 8, 128);
-    return 0;
-
-    // testStatsClear();
-    // expectAccuracy(KernelType::GEMV, output_dim, dim_data->output_npbst_,
-                //    dim_data->getNumElementsPerBlocks());
+    simulateGEMV(kernel, 1024, 1024); // minimum valid dimension: 8, 256
     return 0;
 }
 
 void simulateGEMV(shared_ptr<PIMKernel> kernel, uint32_t output_dim, uint32_t input_dim, uint32_t batch_size) {
-    bool is_data = false;
-    DataDim *dim_data = new DataDim(KernelType::GEMV, batch_size, output_dim, input_dim, is_data);
-
+    DataDim *dim_data = new DataDim(KernelType::GEMV, batch_size, output_dim, input_dim);
+    
     kernel->preloadGemv(&dim_data->weight_npbst_);
     kernel->runPIM();
-    cout << "Preload " << kernel->getCycle() << endl;
+    unsigned preloadCycle = kernel->getCycle();
 
     kernel->executeGemv(&dim_data->weight_npbst_, &dim_data->input_npbst_, false);
     kernel->runPIM();
-    cout << "Execute " << kernel->getCycle() << endl;
+    unsigned executeCycle = kernel->getCycle();
 
     unsigned end_col = kernel->getResultColGemv(
         dim_data->dimTobShape(dim_data->input_dim_), dim_data->output_dim_);
@@ -67,10 +62,29 @@ void simulateGEMV(shared_ptr<PIMKernel> kernel, uint32_t output_dim, uint32_t in
     kernel->readResult(result, pimBankType::ODD_BANK,
                         dim_data->output_dim_ * dim_data->batch_size_, 0, 0, end_col);
     kernel->runPIM();
-    cout << "Result " << kernel->getCycle() << endl;
+    unsigned readCycle = kernel->getCycle();
+
+    unsigned err_count = 0;
+    for (int i = 0; i < output_dim; i++) {
+        fp16 actual = result[i].fp16ReduceSum();
+        fp16 expected = dim_data->output_npbst_.getBurst(i/16).fp16Data_[i%16];
+        
+        if (fp16Equal(actual, expected, 256, 0.7) == false) {
+            ERROR("Test failed with GEMV, output[" << i << "] " 
+                << "calculated: " << actual << ", expected: " << expected);
+            err_count++;
+        }
+    }
+    if (err_count)
+        ERROR("Test failed with GEMV, total error: " << err_count << "/" << output_dim);
 
     delete[] result;
     delete dim_data;
+
+    cout << "GEMV: " << output_dim << "x" << input_dim << endl;
+    cout << "Preload cycle: " << preloadCycle << endl;
+    cout << "Execute cycle: " << executeCycle - preloadCycle << endl;
+    cout << "Read cycle: " << readCycle - executeCycle << endl;
 }
 
 void simulateELT(shared_ptr<PIMKernel> kernel, KernelType kn_type, uint32_t dim, uint32_t batch_size)

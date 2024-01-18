@@ -240,14 +240,26 @@ class DataDim
                 input_npbst_.shape.push_back(batch_size_);
                 input_npbst_.shape.push_back(input_dim_);
                 input_npbst_.setRandomFp16();
-
-                for (int i = 0; i < input_npbst_.bShape[1]; i++)
-                {
-                    BurstType null_bst;
-                    null_bst.set((float)0);
-                    input_npbst_.bData.push_back(null_bst);
+                
+                output_npbst_.shape.push_back(batch_size_);
+                output_npbst_.shape.push_back(output_dim_);
+                output_npbst_.loadTobShape(16);
+                for (int i = 0; i < output_npbst_.bShape[0] * output_npbst_.bShape[1]; i++)
+                    output_npbst_.bData.push_back(BurstType());
+                for (int r = 0; r < weight_npbst_.bShape[0]; r++){
+                    BurstType temp;
+                    // TODO: fix hardcoded tile size (num_grf = 8)
+                    int num_grfB = 8;
+                    for (int c = 0; c < weight_npbst_.bShape[1]/num_grfB; c+=2){
+                        for (int idx = 0; idx < num_grfB; idx++)
+                            temp = (input_npbst_.getBurst(c*num_grfB + idx) * weight_npbst_.getBurst(c*num_grfB + idx, r)) + temp;
+                    }
+                    for (int c = 1; c < weight_npbst_.bShape[1]/num_grfB; c+=2){
+                        for (int idx = 0; idx < num_grfB; idx++)
+                            temp = (input_npbst_.getBurst(c*num_grfB + idx) * weight_npbst_.getBurst(c*num_grfB + idx, r)) + temp;
+                    }
+                    output_npbst_.bData[r/16].fp16Data_[r%16] = temp.fp16ReduceSum();
                 }
-
                 return;
             }
             case KernelType::ADD:
@@ -296,7 +308,7 @@ class DataDim
     bool used_data_;
 
     DataDim(KernelType kn_type, uint32_t batch_size, uint32_t output_dim, uint32_t input_dim,
-            bool used_data)
+            bool used_data = false)
     {
         batch_size_ = batch_size;
         output_dim_ = output_dim;

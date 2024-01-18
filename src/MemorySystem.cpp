@@ -103,8 +103,8 @@ MemorySystem::MemorySystem(unsigned id, unsigned int megsOfMemory, CSVWriter& cs
         8);
     uint64_t megsOfStoragePerRank = bytePerRank >> 20;
 
-    num_ranks_ = (megsOfMemory / Byte2MB(bytePerRank));
-
+    num_ranks_ = (megsOfMemory / Byte2MB(bytePerRank)); 
+    
     // If this is set, effectively override the number of ranks
     if (megsOfMemory != 0)
     {

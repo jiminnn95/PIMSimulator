@@ -58,8 +58,8 @@ using namespace DRAMSim;
 MultiChannelMemorySystem::MultiChannelMemorySystem(const string& deviceIniFilename_,
                                                    const string& systemIniFilename_,
                                                    const string& pwd_, const string& traceFilename_,
-                                                   unsigned megsOfMemory_, string* visFilename_)
-    : megsOfMemory(megsOfMemory_),
+                                                   unsigned megsPerChannel_, string* visFilename_)
+    : megsPerChannel(megsPerChannel_),
       deviceIniFilename(deviceIniFilename_),
       systemIniFilename(systemIniFilename_),
       traceFilename(traceFilename_),
@@ -73,7 +73,7 @@ MultiChannelMemorySystem::MultiChannelMemorySystem(const string& deviceIniFilena
     if (visFilename)
         printf("CC VISFILENAME=%s\n", visFilename->c_str());
 
-    if (!isPowerOfTwo(megsOfMemory))
+    if (!isPowerOfTwo(megsPerChannel))
     {
         ERROR("Please specify a power of 2 memory size");
         abort();
@@ -90,7 +90,7 @@ MultiChannelMemorySystem::MultiChannelMemorySystem(const string& deviceIniFilena
 
     for (size_t i = 0; i < configuration->NUM_CHANS; i++)
     {
-        MemorySystem* channel = new MemorySystem(i, megsOfMemory / configuration->NUM_CHANS,
+        MemorySystem* channel = new MemorySystem(i, megsPerChannel,
                                                  (*csvOut), dramsimLog, *configuration);
         channels.push_back(channel);
     }
